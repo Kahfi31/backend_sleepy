@@ -26,6 +26,7 @@ from fastapi.responses import HTMLResponse
 from .database import get_db
 from .models import User
 import urllib.parse
+import redis.asyncio as aioredis
 
 
 model_path = os.path.join(os.getcwd(), 'ml_model', 'xgb_model_Test.pkl')
@@ -47,6 +48,7 @@ logger = logging.getLogger(__name__)
 models.Base.metadata.create_all(bind=database.engine)
 
 app = FastAPI()
+redis = None
 load_dotenv()
 router = APIRouter()
 otp_storage = {}
@@ -69,6 +71,16 @@ SECRET_KEY = "2&aSeI[]ILhEP-I"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
+@app.on_event("startup")
+async def startup_event():
+    global redis
+    redis = await aioredis.from_url("redis://localhost", decode_responses=True)  # Membuat pool dengan from_url
+
+@app.post("/store-info")
+async def store_user_info(user_info: schemas.UserInfo):
+    user_data = user_info.dict()
+    await redis.set(user_info.gender, str(user_data)) 
+    return {"message": "Data stored successfully in Redis"}
 
 @app.post("/save-data/")
 def save_data(data: schemas.UserData, db: Session = Depends(get_db)):

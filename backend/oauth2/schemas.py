@@ -66,6 +66,13 @@ class UserData(BaseModel):
     date_of_birth: date
     height: float
     weight: float 
+
+class UserInfo(BaseModel):
+    gender : int
+    age : int
+    work : str
+    weight : float
+    height : float
     
 class SleepDataResponse(BaseModel):
     sleep_time: str
