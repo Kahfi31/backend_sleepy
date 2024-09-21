@@ -1,0 +1,20 @@
+NAME=fastapi-app
+DIR=/home/Sleepy-Panda/backend_sleepy
+USER=Sleepy-Panda
+GROUP=Sleepy-Panda
+WORKERS=4
+WORKERS_CLASS=uvicorn.workers.UvicornWorker
+BIND=127.0.0.1:8000
+LOG_LEVEL=error
+
+cd $DIR
+
+exec gunicorn backend.oauth2.main:app --reload \
+   --name $NAME \
+   --workers $WORKERS \
+   --worker-class $WORKER_CLASS \
+   --user=$USER \
+   --group=$GROUP \
+   --bind=$BIND \
+   --log-level=$LOG_LEVEL \
+   --log-file=- 
