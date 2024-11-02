@@ -63,6 +63,7 @@ class UserData(BaseModel):
     name: str
     gender: int
     work: str
+    work_id: int
     date_of_birth: date
     height: float
     weight: float 
