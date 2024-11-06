@@ -665,82 +665,105 @@ async def save_gender(user_data: schemas.UserUpdate, db: Session = Depends(datab
         logger.error(f"Error updating user data: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to update user data: {e}")
 
-
 @app.put("/save-work/")
 async def save_work(user_data: schemas.UserUpdate, db: Session = Depends(database.get_db)):
-    logger.info(f"Received request to update user data: {user_data}")
+    logger.info(f"Menerima permintaan untuk memperbarui data user: {user_data}")
+    
     try:
         user = db.query(models.User).filter(models.User.email == user_data.email).first()
         
         if user:
-            logger.info(f"Found user: {user.email}")
-            if user_data.work:
-                # Map pekerjaan ke work_id
-                work_id_map = {
-                    'Accountant': 0,
-                    'Doctor': 1,
-                    'Engineer': 2,
-                    'Lawyer': 3,
-                    'Manager': 4,
-                    'Nurse': 5,
-                    'Sales Representative': 6,
-                    'Salesperson': 7,
-                    'Scientist': 8,
-                    'Software Engineer': 9,
-                    'Teacher': 10
-                }
-                
-                # Update pekerjaan dan work_id
-                user.work = user_data.work
+            logger.info(f"User ditemukan: {user.email}")
+        
+            # Jika pekerjaan user tidak ada di work_id_map, tambahkan pekerjaan baru
+            work_id_map = {
+                'Accountant': 0,
+                'Doctor': 1,
+                'Engineer': 2,
+                'Lawyer': 3,
+                'Manager': 4,
+                'Nurse': 5,
+                'Sales Representative': 6,
+                'Salesperson': 7,
+                'Scientist': 8,
+                'Software Engineer': 9,
+                'Teacher': 10
+            }
+
+            if user_data.work not in work_id_map:
+                # Jika pekerjaan tidak ada di work_id_map, tambahkan pekerjaan baru
+                new_work_id = len(work_id_map)  # Menggunakan panjang work_id_map sebagai ID baru
+                work_id_map[user_data.work] = new_work_id
+                logger.info(f"Menambahkan pekerjaan baru: {user_data.work} dengan work_id: {new_work_id}")
+                max_work_id = db.query(func.max(new_work_id)).scalar() or -1  # Ambil ID maksimum, atau -1 jika tidak ada
+                new_work_id = max_work_id + 1  # Buat ID baru
+
+                # Tambahkan pekerjaan baru ke database
+                new_work = models.Work(title=user_data.work)  # Simpan pekerjaan baru ke database
+                db.add(new_work)
+                db.commit()  # Simpan ke database
+                db.refresh(new_work)  # Ambil data terbaru dari database
+                user.work_id = new_work_id  # Gunakan ID dari work_id_map
+
+            else:
+                # Jika pekerjaan sudah ada di work_id_map, ambil ID-nya
+                logger.info(f"Pekerjaan sudah ada: {user_data.work} dengan work_id: {work_id_map[user_data.work]}")
                 user.work_id = work_id_map[user_data.work]
-                
-                # Update or insert into daily table
-                daily_data = db.query(models.Work).filter(models.Work.email == user.email).first()
-                
-                # Data yang sesuai berdasarkan pekerjaan
-                work_data = {
-                    'Accountant': (7.891892, 58.108108, 4.594595),
-                    'Doctor': (6.647887, 55.352113, 6.732394),
-                    'Engineer': (8.412698, 51.857143, 3.888889),
-                    'Lawyer': (7.893617, 70.425532, 5.063830),
-                    'Manager': (7.0, 55.0, 5.0),
-                    'Nurse': (7.369863, 78.589041, 5.547945),
-                    'Sales Representative': (4.0, 30.0, 8.0),
-                    'Salesperson': (6.0, 45.0, 7.0),
-                    'Scientist': (5.0, 41.0, 7.0),
-                    'Software Engineer': (6.5, 48.0, 6.0),
-                    'Teacher': (6.975, 45.625, 4.525)
-                }
 
-                quality_of_sleep, physical_activity_level, stress_level = work_data[user_data.work]
+            user.work = user_data.work
 
-                if daily_data:
-                    # Jika entri ada, update
-                    daily_data.quality_of_sleep = quality_of_sleep
-                    daily_data.physical_activity_level = physical_activity_level
-                    daily_data.stress_level = stress_level
-                    daily_data.work_id = user.work_id
-                else:
-                    # Jika entri belum ada, insert baru
-                    new_daily = models.Work(
-                        email=user.email,
-                        quality_of_sleep=quality_of_sleep,
-                        physical_activity_level=physical_activity_level,
-                        stress_level=stress_level,
-                        work_id=user.work_id  # Tambahkan work_id ke Work
-                    )
-                    db.add(new_daily)
-                    
-                db.commit()
-                db.refresh(user)
-                logger.info("Work and daily data saved successfully")
-                return {"message": "Work and daily data saved successfully", "user": user}
+            # Dapatkan data untuk pekerjaan baru atau default
+            work_data = {
+                'Accountant': (7.891892, 58.108108, 4.594595),
+                'Doctor': (6.647887, 55.352113, 6.732394),
+                'Engineer': (8.412698, 51.857143, 3.888889),
+                'Lawyer': (7.893617, 70.425532, 5.063830),
+                'Manager': (7.0, 55.0, 5.0),
+                'Nurse': (7.369863, 78.589041, 5.547945),
+                'Sales Representative': (4.0, 30.0, 8.0),
+                'Salesperson': (6.0, 45.0, 7.0),
+                'Scientist': (5.0, 41.0, 7.0),
+                'Software Engineer': (6.5, 48.0, 6.0),
+                'Teacher': (6.975, 45.625, 4.525)
+            }
+            
+            # Jika pekerjaan baru, gunakan nilai default (misalnya 5 untuk semua)
+            quality_of_sleep, physical_activity_level, stress_level = work_data.get(user_data.work, (5.0, 50.0, 5.0))
+            
+            # Pemrosesan seperti sebelumnya (scaling dan prediksi)
+            X_input = [[user.work_id, quality_of_sleep, physical_activity_level, stress_level] + [0] * 8]
+            X_scaled = scaler.transform(X_input)
+            prediction = model.predict(X_scaled)
+            
+            # Simpan ke tabel harian (daily)
+            daily_data = db.query(models.Work).filter(models.Work.email == user.email).first()
+            if daily_data:
+                daily_data.quality_of_sleep = quality_of_sleep
+                daily_data.physical_activity_level = physical_activity_level
+                daily_data.stress_level = stress_level
+                daily_data.work_id = user.work_id
+            else:
+                new_daily = models.Work(
+                    email=user.email,
+                    quality_of_sleep=quality_of_sleep,
+                    physical_activity_level=physical_activity_level,
+                    stress_level=stress_level,
+                    work_id=user.work_id
+                )
+                db.add(new_daily)
+                
+            db.commit()
+            db.refresh(user)
+            
+            logger.info("Data pekerjaan dan harian berhasil disimpan dengan prediksi")
+            return {"message": "Data pekerjaan dan harian berhasil disimpan", "user": user, "prediction": prediction}
         else:
-            logger.warning("User not found")
-            raise HTTPException(status_code=404, detail="User not found")
+            logger.warning("User tidak ditemukan")
+            raise HTTPException(status_code=404, detail="User tidak ditemukan")
+            
     except Exception as e:
-        logger.error(f"Error updating user data: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to update user data: {e}")
+        logger.error(f"Kesalahan saat memperbarui data user: {e}")
+        raise HTTPException(status_code=500, detail=f"Gagal memperbarui data user: {e}")
 
 @app.put("/save-dob/")
 async def save_dob(user_data: schemas.UserUpdate, db: Session = Depends(database.get_db)):
