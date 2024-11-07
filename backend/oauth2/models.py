@@ -41,6 +41,7 @@ class Work(Base):
     __tablename__ = "work_data"
 
     id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, unique=True, index=True)
     email = Column(String(255), ForeignKey("users.email"), nullable=False)
     work_id = Column(Integer, nullable=True)
     quality_of_sleep = Column(Float, nullable=True)
