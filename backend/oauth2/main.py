@@ -71,6 +71,11 @@ SECRET_KEY = "2&aSeI[]ILhEP-I"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
+def normalize_work_title(work_title: str) -> str:
+    """Normalisasi pekerjaan dengan menghapus spasi tambahan, mengubah ke huruf kecil, dan menghapus karakter non-alfabet."""
+    return ''.join(e for e in work_title.lower().strip() if e.isalnum() or e.isspace()).replace(" ", "")
+
+
 @app.on_event("startup")
 async def startup_event():
     global redis
@@ -670,72 +675,93 @@ async def save_work(user_data: schemas.UserUpdate, db: Session = Depends(databas
     logger.info(f"Menerima permintaan untuk memperbarui data user: {user_data}")
     
     try:
+        # Normalisasi pekerjaan
+        normalized_work = normalize_work_title(user_data.work)
+        
         user = db.query(models.User).filter(models.User.email == user_data.email).first()
         
         if user:
             logger.info(f"User ditemukan: {user.email}")
-        
-            # Jika pekerjaan user tidak ada di work_id_map, tambahkan pekerjaan baru
+            
+            # Mapping pekerjaan yang sudah ada (gunakan key yang sudah dinormalisasi)
             work_id_map = {
-                'Accountant': 0,
-                'Doctor': 1,
-                'Engineer': 2,
-                'Lawyer': 3,
-                'Manager': 4,
-                'Nurse': 5,
-                'Sales Representative': 6,
-                'Salesperson': 7,
-                'Scientist': 8,
-                'Software Engineer': 9,
-                'Teacher': 10
+                normalize_work_title('Accountant'): 0,
+                normalize_work_title('Doctor'): 1,
+                normalize_work_title('Engineer'): 2,
+                normalize_work_title('Lawyer'): 3,
+                normalize_work_title('Manager'): 4,
+                normalize_work_title('Nurse'): 5,
+                normalize_work_title('Sales Representative'): 6,
+                normalize_work_title('Salesperson'): 7,
+                normalize_work_title('Scientist'): 8,
+                normalize_work_title('Software Engineer'): 9,
+                normalize_work_title('Teacher'): 10,
+                normalize_work_title('Ibu Rumah Tangga'): 11,
+                normalize_work_title('Administrator'): 12,
+                normalize_work_title('Artist'): 13,
+                normalize_work_title('Librarian'): 14,
+                normalize_work_title('Marketing'): 15,
+                normalize_work_title('Programmer'): 16,
+                normalize_work_title('Writer'): 17,
+                normalize_work_title('Editing'): 18,
+                normalize_work_title('Penyiar Radio'): 19,
+                normalize_work_title('Technician'): 20
             }
 
-            if user_data.work not in work_id_map:
+            if normalized_work not in work_id_map:
                 # Jika pekerjaan tidak ada di work_id_map, tambahkan pekerjaan baru
                 new_work_id = len(work_id_map)  # Menggunakan panjang work_id_map sebagai ID baru
-                work_id_map[user_data.work] = new_work_id
+                work_id_map[normalized_work] = new_work_id
                 logger.info(f"Menambahkan pekerjaan baru: {user_data.work} dengan work_id: {new_work_id}")
-                max_work_id = db.query(func.max(new_work_id)).scalar() or -1  # Ambil ID maksimum, atau -1 jika tidak ada
-                new_work_id = max_work_id + 1  # Buat ID baru
 
                 # Tambahkan pekerjaan baru ke database
                 new_work = models.Work(title=user_data.work)  # Simpan pekerjaan baru ke database
                 db.add(new_work)
-                db.commit()  # Simpan ke database
-                db.refresh(new_work)  # Ambil data terbaru dari database
-                user.work_id = new_work_id  # Gunakan ID dari work_id_map
+                db.commit()
+                db.refresh(new_work)
+                user.work_id = new_work_id
 
             else:
                 # Jika pekerjaan sudah ada di work_id_map, ambil ID-nya
-                logger.info(f"Pekerjaan sudah ada: {user_data.work} dengan work_id: {work_id_map[user_data.work]}")
-                user.work_id = work_id_map[user_data.work]
+                logger.info(f"Pekerjaan sudah ada: {user_data.work} dengan work_id: {work_id_map[normalized_work]}")
+                user.work_id = work_id_map[normalized_work]
 
             user.work = user_data.work
 
-            # Dapatkan data untuk pekerjaan baru atau default
+            # Data untuk pekerjaan baru atau default (gunakan key yang sudah dinormalisasi)
             work_data = {
-                'Accountant': (7.891892, 58.108108, 4.594595),
-                'Doctor': (6.647887, 55.352113, 6.732394),
-                'Engineer': (8.412698, 51.857143, 3.888889),
-                'Lawyer': (7.893617, 70.425532, 5.063830),
-                'Manager': (7.0, 55.0, 5.0),
-                'Nurse': (7.369863, 78.589041, 5.547945),
-                'Sales Representative': (4.0, 30.0, 8.0),
-                'Salesperson': (6.0, 45.0, 7.0),
-                'Scientist': (5.0, 41.0, 7.0),
-                'Software Engineer': (6.5, 48.0, 6.0),
-                'Teacher': (6.975, 45.625, 4.525)
+                normalize_work_title('Accountant'): (7.891892, 58.108108, 4.594595),
+                normalize_work_title('Doctor'): (6.647887, 55.352113, 6.732394),
+                normalize_work_title('Engineer'): (8.412698, 51.857143, 3.888889),
+                normalize_work_title('Lawyer'): (7.893617, 70.425532, 5.063830),
+                normalize_work_title('Manager'): (7.0, 55.0, 5.0),
+                normalize_work_title('Nurse'): (7.369863, 78.589041, 5.547945),
+                normalize_work_title('Sales Representative'): (4.0, 30.0, 8.0),
+                normalize_work_title('Salesperson'): (6.0, 45.0, 7.0),
+                normalize_work_title('Scientist'): (5.0, 41.0, 7.0),
+                normalize_work_title('Software Engineer'): (6.5, 48.0, 6.0),
+                normalize_work_title('Teacher'): (6.975, 45.625, 4.525),
+                normalize_work_title('Ibu Rumah Tangga'): (4.32, 50.2, 7.56372),
+                normalize_work_title('Administrator'): (3.21, 42,5, 5.3029),
+                normalize_work_title('Artist'): (8.82617, 80.44, 7.86746),
+                normalize_work_title('Librarian'): (4.583, 65.221, 6.56372),
+                normalize_work_title('Marketing'): (7.6727, 75.102, 8.4135),
+                normalize_work_title('Programmer'): (8.8675, 38.73, 8.3919),
+                normalize_work_title('Writer'): (6.70, 43.65, 7.125),
+                normalize_work_title('Editing'): (8.847, 40.58, 8.147),
+                normalize_work_title('Penyiar Radio'): (4.6282, 56.74, 5.435),
+                normalize_work_title('Technician'): (7.3182, 68.43, 8.321)
             }
-            
-            # Jika pekerjaan baru, gunakan nilai default (misalnya 5 untuk semua)
-            quality_of_sleep, physical_activity_level, stress_level = work_data.get(user_data.work, (5.0, 50.0, 5.0))
-            
-            # Pemrosesan seperti sebelumnya (scaling dan prediksi)
+
+            # Mengambil data pekerjaan
+            quality_of_sleep, physical_activity_level, stress_level = work_data.get(normalized_work, (5.0, 50.0, 5.0))
+
+            # Pemrosesan fitur dan prediksi
             X_input = [[user.work_id, quality_of_sleep, physical_activity_level, stress_level] + [0] * 8]
-            X_scaled = scaler.transform(X_input)
+            X_scaled = scaler.transform(X_input)  # Scaling input data
             prediction = model.predict(X_scaled)
-            
-            # Simpan ke tabel harian (daily)
+
+            # Simpan data ke tabel daily
             daily_data = db.query(models.Work).filter(models.Work.email == user.email).first()
             if daily_data:
                 daily_data.quality_of_sleep = quality_of_sleep
@@ -764,6 +790,7 @@ async def save_work(user_data: schemas.UserUpdate, db: Session = Depends(databas
     except Exception as e:
         logger.error(f"Kesalahan saat memperbarui data user: {e}")
         raise HTTPException(status_code=500, detail=f"Gagal memperbarui data user: {e}")
+    
 
 @app.put("/save-dob/")
 async def save_dob(user_data: schemas.UserUpdate, db: Session = Depends(database.get_db)):
