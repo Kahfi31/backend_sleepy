@@ -145,6 +145,7 @@ def create_table():
         conn.close()
 
 # Fungsi untuk menyimpan data ke database lokal
+# Perbaikan: Tidak menyebutkan kolom id pada insert (karena AUTOINCREMENT)
 def save_users_to_local(email, hashed_password, work, name=None, gender=None, date_of_birth=None, age=None, weight=None, height=None):
     conn = sqlite3.connect('local_data.db')
     cursor = conn.cursor()
@@ -154,7 +155,7 @@ def save_users_to_local(email, hashed_password, work, name=None, gender=None, da
             raise ValueError(f"Invalid work value: {work}")
 
         cursor.execute('''
-            INSERT INTO users (id, email, hashed_password, work, name, gender, date_of_birth, age, weight, height)
+            INSERT INTO users (email, hashed_password, work, name, gender, date_of_birth, age, weight, height)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (email, hashed_password, work, name, gender, date_of_birth, age, weight, height))
         
@@ -167,12 +168,13 @@ def save_users_to_local(email, hashed_password, work, name=None, gender=None, da
     finally:
         conn.close()
 
+# Perbaikan: Tidak menyebutkan kolom id pada insert (karena AUTOINCREMENT)
 def save_daily_to_local(email, upper_pressure, lower_pressure, daily_steps, heart_rate, duration, prediction_result):
     conn = sqlite3.connect('local_data.db')
     cursor = conn.cursor()
     try:
         cursor.execute('''
-            INSERT INTO daily (id, email, upper_pressure, lower_pressure, daily_steps, heart_rate, duration, prediction_result)
+            INSERT INTO daily (email, upper_pressure, lower_pressure, daily_steps, heart_rate, duration, prediction_result)
             VALUES (?, ?, ?, ?, ?, ?, ?)
         ''', (email, upper_pressure, lower_pressure, daily_steps, heart_rate, duration, prediction_result))
         
@@ -183,12 +185,13 @@ def save_daily_to_local(email, upper_pressure, lower_pressure, daily_steps, hear
     finally:
         conn.close()
 
+# Perbaikan: Tidak menyebutkan kolom id pada insert (karena AUTOINCREMENT)
 def save_feedback_to_local(email, feedback):
     conn = sqlite3.connect('local_data.db')
     cursor = conn.cursor()
     try:
         cursor.execute('''
-            INSERT INTO feedback (id, email, feedback)
+            INSERT INTO feedback (email, feedback)
             VALUES (?, ?)
         ''', (email, feedback))
         
@@ -199,12 +202,13 @@ def save_feedback_to_local(email, feedback):
     finally:
         conn.close()
 
+# Perbaikan: Tidak menyebutkan kolom id pada insert (karena AUTOINCREMENT)
 def save_sleep_records_to_local(email, sleep_time, wake_time, duration):
     conn = sqlite3.connect('local_data.db')
     cursor = conn.cursor()
     try:
         cursor.execute('''
-            INSERT INTO sleep_records (id, email, sleep_time, wake_time, duration)
+            INSERT INTO sleep_records (email, sleep_time, wake_time, duration)
             VALUES (?, ?, ?, ?)
         ''', (email, sleep_time, wake_time, duration))
         
@@ -215,12 +219,13 @@ def save_sleep_records_to_local(email, sleep_time, wake_time, duration):
     finally:
         conn.close()
 
+# Perbaikan: Tidak menyebutkan kolom id pada insert (karena AUTOINCREMENT)
 def save_weekly_prediction_to_local(email, prediction_result):
     conn = sqlite3.connect('local_data.db')
     cursor = conn.cursor()
     try:
         cursor.execute('''
-            INSERT INTO weekly_predictions (id, email, prediction_result)
+            INSERT INTO weekly_predictions (email, prediction_result)
             VALUES (?, ?)
         ''', (email, prediction_result))
         
@@ -231,39 +236,41 @@ def save_weekly_prediction_to_local(email, prediction_result):
     finally:
         conn.close()
 
+# Perbaikan: Tidak menyebutkan kolom id pada insert (karena AUTOINCREMENT)
 def save_monthly_prediction_to_local(email, prediction_result):
     conn = sqlite3.connect('local_data.db')
     cursor = conn.cursor()
     try:
         cursor.execute('''
-            INSERT INTO monthly_predictions (id, email, prediction_result, created_at)
+            INSERT INTO monthly_predictions (email, prediction_result)
             VALUES (?, ?)
         ''', (email, prediction_result))
         
         conn.commit()
-        print("Data berhasil disimpan ke tabel weekly_predictions.")
+        print("Data berhasil disimpan ke tabel monthly_predictions.")
     except sqlite3.Error as e:
-        print(f"Error saat menyimpan data ke tabel weekly_predictions: {e}")
+        print(f"Error saat menyimpan data ke tabel monthly_predictions: {e}")
     finally:
         conn.close()
     
-def save_work_data_to_local(email, prediction_result):
+# Perbaikan: Tidak menyebutkan kolom id pada insert (karena AUTOINCREMENT)
+def save_work_data_to_local(email, quality_of_sleep=None, physical_activity_level=None, stress_level=None, work_id=None):
     conn = sqlite3.connect('local_data.db')
     cursor = conn.cursor()
     try:
         cursor.execute('''
-            INSERT INTO work_data (id, email, quality_of_sleep, physical_activity_level, stress_level, work_id, )
-            VALUES (?, ?)
-        ''', (email, prediction_result))
+            INSERT INTO work_data (email, quality_of_sleep, physical_activity_level, stress_level, work_id)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (email, quality_of_sleep, physical_activity_level, stress_level, work_id))
         
         conn.commit()
-        print("Data berhasil disimpan ke tabel weekly_predictions.")
+        print("Data berhasil disimpan ke tabel work_data.")
     except sqlite3.Error as e:
-        print(f"Error saat menyimpan data ke tabel weekly_predictions: {e}")
+        print(f"Error saat menyimpan data ke tabel work_data: {e}")
     finally:
         conn.close()
 
-
+# Perbaikan urutan parameter check_password_hash (hash, plain_password)
 def authenticate_local(email, password):
     conn = sqlite3.connect('local_data.db')
     cursor = conn.cursor()
@@ -272,7 +279,7 @@ def authenticate_local(email, password):
         result = cursor.fetchone()
         if result:
             hashed_password = result[0]
-            if check_password_hash(password, hashed_password):
+            if check_password_hash(hashed_password, password):
                 return True  # Login berhasil
             else:
                 return False  # Password salah
@@ -284,13 +291,24 @@ def authenticate_local(email, password):
     finally:
         conn.close()
 
+# Perbaikan: Tambahkan handling error requests agar tidak crash jika server mati
+import time
+
+def safe_post(url, json):
+    try:
+        response = requests.post(url, json=json, timeout=5)
+        return response
+    except requests.RequestException as e:
+        print(f"Gagal mengirim ke server: {e}")
+        return None
+
 # Sinkronisasi tabel daily
 def sync_daily_to_server(cursor):
     cursor.execute("SELECT * FROM daily WHERE synced = 0")
     unsynced_data = cursor.fetchall()
     for record in unsynced_data:
-        response = requests.post('http://103.129.148.233/api/sync_daily', json={
-            'id' : record[1],
+        response = safe_post('http://103.129.148.233/api/sync_daily', json={
+            'id': record[0],
             'email': record[2],
             'upper_pressure': record[3],
             'lower_pressure': record[4],
@@ -299,7 +317,7 @@ def sync_daily_to_server(cursor):
             'duration': record[7],
             'prediction_result': record[8]
         })
-        if response.status_code == 200:
+        if response and response.status_code == 200:
             cursor.execute("UPDATE daily SET synced = 1 WHERE id = ?", (record[0],))
 
 # Sinkronisasi tabel feedback
@@ -307,13 +325,13 @@ def sync_feedback_to_server(cursor):
     cursor.execute("SELECT * FROM feedback WHERE synced = 0")
     unsynced_data = cursor.fetchall()
     for record in unsynced_data:
-        response = requests.post('http://103.129.148.233/api/sync_feedback', json={
-            'id' : record[1]
-,           'email': record[2],
-            'feedback': record[3],
-            'created_at' : record[4]
+        response = safe_post('http://103.129.148.233/api/sync_feedback', json={
+            'id': record[0],
+            'email': record[1],
+            'feedback': record[2],
+            'created_at': record[3]
         })
-        if response.status_code == 200:
+        if response and response.status_code == 200:
             cursor.execute("UPDATE feedback SET synced = 1 WHERE id = ?", (record[0],))
 
 # Sinkronisasi tabel sleep_records
@@ -321,14 +339,14 @@ def sync_sleep_records_to_server(cursor):
     cursor.execute("SELECT * FROM sleep_records WHERE synced = 0")
     unsynced_data = cursor.fetchall()
     for record in unsynced_data:
-        response = requests.post('http://103.129.148.233/api/sync_sleep_records', json={
-            'id' :record[1],
-            'email': record[2],
-            'sleep_time': record[3],
-            'wake_time': record[4],
-            'duration': record[5]
+        response = safe_post('http://103.129.148.233/api/sync_sleep_records', json={
+            'id': record[0],
+            'email': record[1],
+            'sleep_time': record[2],
+            'wake_time': record[3],
+            'duration': record[4]
         })
-        if response.status_code == 200:
+        if response and response.status_code == 200:
             cursor.execute("UPDATE sleep_records SET synced = 1 WHERE id = ?", (record[0],))
 
 # Sinkronisasi tabel weekly_predictions
@@ -336,65 +354,66 @@ def sync_weekly_predictions_to_server(cursor):
     cursor.execute("SELECT * FROM weekly_predictions WHERE synced = 0")
     unsynced_data = cursor.fetchall()
     for record in unsynced_data:
-        response = requests.post('http://103.129.148.233/api/sync_weekly_predictions', json={
-            'id' : record[1],
-            'email': record[2],
-            'prediction_result': record[3],
-            'prediction_date' : record[4]
+        response = safe_post('http://103.129.148.233/api/sync_weekly_predictions', json={
+            'id': record[0],
+            'email': record[1],
+            'prediction_result': record[2],
+            'created_at': record[3]
         })
-        if response.status_code == 200:
+        if response and response.status_code == 200:
             cursor.execute("UPDATE weekly_predictions SET synced = 1 WHERE id = ?", (record[0],))
 
 def sync_monthly_predictions_to_server(cursor):
     cursor.execute("SELECT * FROM monthly_predictions WHERE synced = 0")
     unsynced_data = cursor.fetchall()
     for record in unsynced_data:
-        response = requests.post('http://103.129.148.233/api/sync_weekly_predictions', json={
-            'id' : record[1],
-            'email': record[2],
-            'prediction_result': record[3],
-            'created_at' : record[4]
+        response = safe_post('http://103.129.148.233/api/sync_monthly_predictions', json={
+            'id': record[0],
+            'email': record[1],
+            'prediction_result': record[2],
+            'created_at': record[3]
         })
-        if response.status_code == 200:
+        if response and response.status_code == 200:
             cursor.execute("UPDATE monthly_predictions SET synced = 1 WHERE id = ?", (record[0],))
 
 def sync_users_to_server(cursor):
     cursor.execute("SELECT * FROM users WHERE synced = 0")
     unsynced_data = cursor.fetchall()
     for record in unsynced_data:
-        response = requests.post('http://103.129.148.233/api/sync_weekly_predictions', json={
-            'id' : record[1],
-            'email': record[2],
-            'hashed_password': record[3],
-            'created_at' : record[4],
-            'name' : record[5],
-            'work' : record[6],
-            'date_of_birth' : record[7],
-            'age' : record[8],
-            'weight' : record[9],
-            'height' : record[10],
-            'upper_pressure' : record[11],
-            'lower_pressure' : record[12],
-            'daily_steps' : record[13],
-            'heart_rate' : record[14],
-            'reset_token' : record[15]
+        response = safe_post('http://103.129.148.233/api/sync_users', json={
+            'id': record[0],
+            'email': record[1],
+            'hashed_password': record[2],
+            'created_at': record[3],
+            'name': record[4],
+            'gender': record[5],
+            'work': record[6],
+            'date_of_birth': record[7],
+            'age': record[8],
+            'weight': record[9],
+            'height': record[10],
+            'upper_pressure': record[11],
+            'lower_pressure': record[12],
+            'daily_steps': record[13],
+            'heart_rate': record[14],
+            'reset_token': record[15]
         })
-        if response.status_code == 200:
+        if response and response.status_code == 200:
             cursor.execute("UPDATE users SET synced = 1 WHERE id = ?", (record[0],))
 
 def sync_work_data_to_server(cursor):
     cursor.execute("SELECT * FROM work_data WHERE synced = 0")
     unsynced_data = cursor.fetchall()
     for record in unsynced_data:
-        response = requests.post('http://103.129.148.233/api/sync_weekly_predictions', json={
-            'id' : record[1],
-            'email': record[2],
-            'quality_of_sleep': record[3],
-            'physical_activity_level' : record[4],
-            'stress_level' : record[5],
-            'work_id' : record[6]
+        response = safe_post('http://103.129.148.233/api/sync_work_data', json={
+            'id': record[0],
+            'email': record[1],
+            'quality_of_sleep': record[2],
+            'physical_activity_level': record[3],
+            'stress_level': record[4],
+            'work_id': record[5]
         })
-        if response.status_code == 200:
+        if response and response.status_code == 200:
             cursor.execute("UPDATE work_data SET synced = 1 WHERE id = ?", (record[0],))
 
 
@@ -407,6 +426,9 @@ def sync_data_to_server():
         sync_feedback_to_server(cursor)
         sync_sleep_records_to_server(cursor)
         sync_weekly_predictions_to_server(cursor)
+        sync_monthly_predictions_to_server(cursor)
+        sync_users_to_server(cursor)
+        sync_work_data_to_server(cursor)
         
         conn.commit()
         print("Data dari semua tabel berhasil disinkronkan ke server.")

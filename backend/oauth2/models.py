@@ -34,7 +34,6 @@ class SleepRecord(Base):
     sleep_time = Column(DateTime, nullable=False)
     wake_time = Column(DateTime, nullable=False)
     duration = Column(Float, nullable=False)  # Duration of sleep in hours
-
     user = relationship("User", back_populates="sleep_records")
 
 class Work(Base):
